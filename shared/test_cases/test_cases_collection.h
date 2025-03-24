@@ -1,6 +1,7 @@
 #pragma once
 
-#include "test_case.h"
+#include "../../../normal-forms/source/typedefs.h"
+#include "../../../normal-forms/source/Diagonalization/Diagonalization.hpp"
 
 class TestCasesCollection
 {
@@ -11,12 +12,10 @@ class TestCasesCollection
         void generate_PCR3BP_test();
 
     public:
-        TestCase diagonal_matrix;
-        TestCase PCR3BP;
+        Diagonalization<capd::Complex> diagonal_matrix;
+        Diagonalization<capd::Complex> PCR3BP;
 
-        TestCasesCollection(int maxDerivative) :  maxDerivative(maxDerivative)
-        {
-            generate_diagonal_matrix_test();
-            generate_PCR3BP_test();
-        }
+        capd::DMap PCR3BP_dmap;
+
+        TestCasesCollection(int maxDerivative); 
 };
