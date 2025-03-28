@@ -1,5 +1,5 @@
 # a list of all the programs in your package
-PROGS = experiments/comparing-trajectories-test/main
+PROGS = experiments/comparing-trajectories-test/main experiments/comparing-trajectories-test/calculate-normal-form
 
 # a list of all your units to be linked with your programs
 OTHERS = shared/test_cases/test_cases_collection
