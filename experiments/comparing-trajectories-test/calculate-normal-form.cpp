@@ -9,18 +9,20 @@ using namespace std;
 
 int main()
 {
-    int methodDegree = 8;
-    TestCasesCollection testCases(10);
+    int methodDegree = 15;
+    TestCasesCollection testCases(16);
+    auto &testCase = testCases.PCR3BP_L4;
+
     string path = "experiments/comparing-trajectories-test/results/";
 
-    NormalFormFinder<ALG_LOGGER> finder(methodDegree,  testCases.PCR3BP);
+    NormalFormFinder<ALG_LOGGER> finder(methodDegree,  testCase.diagonalization);
     auto normalForm = finder.calculatePseudoNormalForm();
 
-    ofstream fileN(path + "N_deg" + to_string(methodDegree) + ".txt");
+    ofstream fileN(path + testCase.testName + "_N_deg" + to_string(methodDegree) + ".txt");
     normalForm.getN().serialize(fileN);
     fileN.close();
 
-    ofstream filePhi(path + "Phi_deg" + to_string(methodDegree) + ".txt");
+    ofstream filePhi(path + testCase.testName + "_Phi_deg" + to_string(methodDegree) + ".txt");
     normalForm.getPhi().serialize(filePhi);
     filePhi.close();
 
