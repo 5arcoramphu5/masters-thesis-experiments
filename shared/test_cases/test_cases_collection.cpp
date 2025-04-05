@@ -86,6 +86,7 @@ void TestCasesCollection::generate_PCR3BP_L4_test()
     PCR3BP_L4 = TestCase("PCR3BP_L4", diagonalization);
 
     PCR3BP_dmap = DMap(pcr3bpVectorField, 4, 4, 1, maxDerivative);
+    PCR3BP_dmap.setParameter(0, 0.5); // mu parameter
     PCR3BP_dmap.setDegree(maxDerivative);
 }
 
