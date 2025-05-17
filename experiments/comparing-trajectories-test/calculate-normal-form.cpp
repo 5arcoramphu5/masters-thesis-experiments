@@ -15,8 +15,8 @@ int main()
 
     string path = "experiments/comparing-trajectories-test/results/";
 
-    NormalFormFinder<ALG_LOGGER> finder(methodDegree,  testCase.diagonalization);
-    auto normalForm = finder.calculatePseudoNormalForm();
+    NormalFormFinder<ALG_LOGGER> finder(methodDegree);
+    auto normalForm = finder.calculatePseudoNormalForm(testCase.diagonalization);
 
     ofstream fileN(path + testCase.testName + "_N_deg" + to_string(methodDegree) + ".txt");
     normalForm.getN().serialize(fileN);

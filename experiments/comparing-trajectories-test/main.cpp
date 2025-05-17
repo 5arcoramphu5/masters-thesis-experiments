@@ -32,10 +32,10 @@ int main()
     TestCasesCollection testCases(methodDegree+1);
     auto &testCase = testCases.PCR3BP_L4;
 
-    NormalFormFinder<ALG_LOGGER> finder(methodDegree,  testCase.diagonalization);
-    auto normalForm = finder.calculatePseudoNormalForm();
+    NormalFormFinder<ALG_LOGGER> finder(methodDegree);
+    auto normalForm = finder.calculatePseudoNormalForm(testCase.diagonalization);
 
-    Complex lambda1(0.1, 0), lambda2(-0.1, 0); // the closer to 0 the closer to p transformedPoint will be
+    Complex lambda1(0.0000001, 0), lambda2(-0.0000001, 0); // the closer to 0 the closer to p transformedPoint will be
     CVector point({ lambda1, lambda2, conj(lambda1), conj(lambda2) });
     auto transformedPoint =  testCase.diagonalization.toOriginal(normalForm.getPhi()(point));
     cout << "transformed point: " << transformedPoint << "\n\n";
