@@ -9,7 +9,9 @@ struct TestCase
     std::string testName;
     Diagonalization<Coeff> diagonalization;
 
-    TestCase(std::string testName, const Diagonalization<Coeff> &diagonalization) : testName(testName), diagonalization(diagonalization) {}
+    TestCase(std::string testName, MapFunction f, int noParams, const Vector<Coeff> &p, const Matrix<Coeff> &J, const Matrix<Coeff> &invJ, const Matrix<Coeff> &lambda, int maxDerivative)
+     : testName(testName), diagonalization(f, noParams, p, J, invJ, lambda, maxDerivative) {}
+     
     TestCase() : testName(""), diagonalization() {}
 };
 

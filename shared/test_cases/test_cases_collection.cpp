@@ -1,18 +1,10 @@
 #include "test_cases_collection.h"
 
 #include "../../../normal-forms/source/typedefs.h"
-#include "../../../normal-forms/source/NormalFormFinder/NormalFormFinder.hpp"
 
 using namespace std;
 using namespace capd;
 using capd::autodiff::Node;
-
-TestCasesCollection::TestCasesCollection(int maxDerivative): maxDerivative(maxDerivative)
-{
-    generate_diagonal_matrix_test();
-    generate_PCR3BP_L1_test();
-    generate_PCR3BP_L4_test();
-}
 
 void diagonalVectorField(Node /*t*/, Node in[], int /*dimIn*/, Node out[], int /*dimOut*/, Node params[], int /*noParams*/)
 {
@@ -29,14 +21,12 @@ void TestCasesCollection::generate_diagonal_matrix_test()
     CMatrix J = CMatrix::Identity(4);
     CMatrix invJ = CMatrix::Identity(4);
 
-    Diagonalization<Complex> diagonalization(diagonalVectorField, 5, p, J, invJ, lambda, maxDerivative);
-    diagonalization.setParameter(0, Complex(1, 1));
-    diagonalization.setParameter(1, Complex(-1, -1));
-    diagonalization.setParameter(2, Complex(1, -1));
-    diagonalization.setParameter(3, Complex(-1, 1));
-    diagonalization.setParameter(4, 1i);
-
-    diagonal_matrix = TestCase("diagonal_matrix", diagonalization);
+    diagonal_matrix = TestCase("diagonal_matrix", diagonalVectorField, 5, p, J, invJ, lambda, maxDerivative);
+    diagonal_matrix.diagonalization.setParameter(0, Complex(1, 1));
+    diagonal_matrix.diagonalization.setParameter(1, Complex(-1, -1));
+    diagonal_matrix.diagonalization.setParameter(2, Complex(1, -1));
+    diagonal_matrix.diagonalization.setParameter(3, Complex(-1, 1));
+    diagonal_matrix.diagonalization.setParameter(4, 1i);
 }
 
 void pcr3bpVectorField(Node /*t*/, Node in[], int /*dimIn*/, Node out[], int /*dimOut*/, Node params[], int /*noParams*/)
@@ -80,14 +70,8 @@ void TestCasesCollection::generate_PCR3BP_L4_test()
         {Complex(-0.598513, 0.), Complex(-0.598513, 0.), Complex(-0.598513, 0.), Complex(-0.598513, 0.)}, 
         {Complex(-0.0799453, -0.44769), Complex(0.0799453, 0.44769), Complex(-0.0799453, 0.44769), Complex(0.0799453, -0.44769)}});
 
-    Diagonalization<Complex> diagonalization(pcr3bpVectorField, 1, p, J, invJ, lambda, maxDerivative);
-    diagonalization.setParameter(0, 0.5); // mu parameter
-
-    PCR3BP_L4 = TestCase("PCR3BP_L4", diagonalization);
-
-    PCR3BP_dmap = DMap(pcr3bpVectorField, 4, 4, 1, maxDerivative);
-    PCR3BP_dmap.setParameter(0, 0.5); // mu parameter
-    PCR3BP_dmap.setDegree(maxDerivative);
+    PCR3BP_L4 = TestCase("PCR3BP_L4", pcr3bpVectorField, 1, p, J, invJ, lambda, maxDerivative);
+    PCR3BP_L4.diagonalization.setParameter(0, 0.5); // mu parameter
 }
 
 void TestCasesCollection::generate_PCR3BP_L1_test()
@@ -112,8 +96,17 @@ void TestCasesCollection::generate_PCR3BP_L1_test()
         {Complex(0.911087, 0.), Complex(0.00000000000000014884, -0.209856), Complex(-0.911087, 0.), Complex(0.00000000000000014884, 0.209856)}, 
         {Complex(0.32345, 0.), Complex(-0.92119, 0.), Complex(0.32345, 0.), Complex(-0.92119, 0.)}});
 
-    Diagonalization<Complex> diagonalization(pcr3bpVectorField, 1, p, J, invJ, lambda, maxDerivative);
-    diagonalization.setParameter(0, 0.5); // mu parameter
+    PCR3BP_L1 = TestCase("PCR3BP_L1", pcr3bpVectorField, 1, p, J, invJ, lambda, maxDerivative);
+    PCR3BP_L1.diagonalization.setParameter(0, 0.5); // mu parameter
+}
 
-    PCR3BP_L1 = TestCase("PCR3BP_L1", diagonalization);
+TestCasesCollection::TestCasesCollection(int maxDerivative): maxDerivative(maxDerivative)
+{
+    generate_diagonal_matrix_test();
+    generate_PCR3BP_L1_test();
+    generate_PCR3BP_L4_test();
+
+    PCR3BP_dmap = DMap(pcr3bpVectorField, 4, 4, 1, maxDerivative);
+    PCR3BP_dmap.setParameter(0, 0.5); // mu parameter
+    PCR3BP_dmap.setDegree(maxDerivative);
 }
