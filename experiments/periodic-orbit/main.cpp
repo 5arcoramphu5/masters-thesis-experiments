@@ -71,7 +71,7 @@ void showAndSavePlot(Plot2D &plot)
     canvas.size(1000, 1000);
 
     canvas.show();
-    canvas.save("experiments/periodic-orbits-check/plot.pdf");
+    canvas.save("experiments/periodic-orbit/plot.pdf");
 }
 
 bool isNearL4(const DVector &point, double epsilon)
@@ -145,6 +145,8 @@ int main()
         nfY.push_back(normalFormSol[1]);
     }
     cout << "t: " << t << endl;
+    cout << "diffLeft:\n " <<  (nfX.front() - solverX.back()) << " " << (nfY.front() - solverY.back()) << endl;
+    cout << "diffRight:\n" << (nfX.back() - solverX2.back()) << " " << (nfY.back() - solverY2.back()) << endl;
     addCurveToPlot(plot, nfX, nfY, "normal form solution");
 
     showAndSavePlot(plot);
