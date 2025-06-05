@@ -5,7 +5,6 @@
 #include "../../../normal-forms/source/NormalFormFinder/NormalFormFinder.hpp"
 
 #include "../../shared/test_cases/test_cases_collection.h"
-#include "../../shared/typedefs.h"
 
 using namespace std;
 using namespace capd;
@@ -15,12 +14,12 @@ using namespace capd;
 #define INIT_TIME 0
 #define FINAL_TIME 1
 
-DTimeMap::SolutionCurve integrateSolution(DMap &map, DVector &point, int order)
+LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int order)
 {
-    DOdeSolver solver(map, order);
-    DTimeMap timeMap(solver);
+    LDOdeSolver solver(map, order);
+    LDTimeMap timeMap(solver);
 
-    DTimeMap::SolutionCurve solution(INIT_TIME);
+    LDTimeMap::SolutionCurve solution(INIT_TIME);
     timeMap(FINAL_TIME, point, solution);
     return solution;
 }
@@ -39,7 +38,7 @@ int main()
     auto transformedPoint =  testCase.diagonalization.toOriginal(normalForm.getPhi()(point));
     cout << "transformed point: " << transformedPoint << "\n\n";
 
-    DVector realTransformedPoint(4);
+    LDVector realTransformedPoint(4);
     for(int i = 0; i < 4; ++i)
         realTransformedPoint[i] = transformedPoint[i].real();
 
@@ -55,7 +54,7 @@ int main()
         cout << "t: " << t << " ";
         cout << "diff: ";
         for(int j = 0; j < 4; ++j)
-            cout << (intSolution(t)[j] - normalFormSol[j]) << " ";
+            cout << ((Complex)intSolution(t)[j] - normalFormSol[j]) << " ";
         cout << endl;
     }
 

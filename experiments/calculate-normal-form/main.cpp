@@ -1,7 +1,6 @@
 #include <fstream>
 #include "../../../normal-forms/source/NormalFormFinder/NormalFormFinder.hpp"
 #include "../../shared/test_cases/test_cases_collection.h"
-#include "../../shared/typedefs.h"
 
 using namespace std;
 

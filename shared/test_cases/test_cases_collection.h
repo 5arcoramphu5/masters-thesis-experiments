@@ -29,7 +29,7 @@ class TestCasesCollection
         TestCase<capd::Complex> PCR3BP_L4;
         TestCase<capd::Complex> PCR3BP_L1;
 
-        capd::DMap PCR3BP_dmap;
+        capd::LDMap PCR3BP_dmap;
 
         TestCasesCollection(int maxDerivative); 
 };

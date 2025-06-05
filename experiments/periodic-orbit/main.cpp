@@ -6,7 +6,6 @@
 #include "../../../normal-forms/source/NormalFormFinder/NormalFormFinder.hpp"
 
 #include "../../shared/test_cases/test_cases_collection.h"
-#include "../../shared/typedefs.h"
 
 using namespace std;
 using namespace capd;
@@ -14,15 +13,16 @@ using namespace sciplot;
 
 #define ALG_LOGGER Logger<ProgressIndication>
 
-DTimeMap::SolutionCurve integrateSolution(DMap &map, DVector &point, int order, double initTime, double finalTime)
+LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int order, double initTime, double finalTime)
 {
-    DOdeSolver solver(map, order);
-    DTimeMap timeMap(solver);
+    LDOdeSolver solver(map, order);
+    LDTimeMap timeMap(solver);
 
-    DTimeMap::SolutionCurve solution(initTime);
+    LDTimeMap::SolutionCurve solution(initTime);
     timeMap(finalTime, point, solution);
     return solution;
 }
+
 
 Plot2D createPlot()
 {
@@ -74,7 +74,7 @@ void showAndSavePlot(Plot2D &plot)
     canvas.save("experiments/periodic-orbit/plot.pdf");
 }
 
-bool isNearL4(const DVector &point, double epsilon)
+bool isNearL4(const LDVector &point, double epsilon)
 {
     DVector L4({0, 0.866025403784438646763723170753});
     return (abs(point[0] - L4[0]) < epsilon && abs(point[1] - L4[1]) < epsilon);
@@ -96,7 +96,7 @@ int main()
     file.close();
     cout << "normal form imported" << endl;
 
-    DVector point(initialPoint);
+    LDVector point(initialPoint);
     double finalTime = 31; // max time in integration
     auto intSolution = integrateSolution(testCases.PCR3BP_dmap, point, 10, 0, finalTime);
 
@@ -136,7 +136,7 @@ int main()
     {
         CVector normalFormSolC = normalForm.solution(t, testCase.diagonalization.toDiag(lastPoint));
         normalFormSolC = testCase.diagonalization.toOriginal(normalForm.getPhi()(normalFormSolC));
-        DVector normalFormSol({normalFormSolC[0].real(), normalFormSolC[1].real()});
+        LDVector normalFormSol({normalFormSolC[0].real(), normalFormSolC[1].real()});
 
         if(!isNearL4(normalFormSol, epsilon))
             break;
