@@ -13,30 +13,42 @@ using namespace sciplot;
 
 #define ALG_LOGGER Logger<ProgressIndication>
 
-LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int order, double initTime, double finalTime)
+LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, int order, double initTime, double finalTime)
 {
     LDOdeSolver solver(map, order);
     LDTimeMap timeMap(solver);
 
     LDTimeMap::SolutionCurve solution(initTime);
+    LDVector point(initialPoint);
     timeMap(finalTime, point, solution);
     return solution;
 }
 
-
-Plot2D createPlot()
+void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, double epsilon)
 {
-    Plot2D plot;
     plot.xlabel("x");
     plot.ylabel("y");
+    plotCloseUp.xlabel("x");
+    plotCloseUp.ylabel("y");
+
     plot.palette("set1");
+    plotCloseUp.palette("set1");
 
     double range = 1.2;
     plot.xrange(-range, range);
     plot.yrange(-range, range);
-    plot.size(400, 400);
+    plot.size(1000, 1000);
+
+    double scale = 3;
+    plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
+    plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
+    plotCloseUp.size(1000, 1000);
 
     plot.legend()
+        .atOutsideBottom()
+        .displayHorizontal()
+        .displayExpandWidthBy(2);
+    plotCloseUp.legend()
         .atOutsideBottom()
         .displayHorizontal()
         .displayExpandWidthBy(2);
@@ -45,33 +57,40 @@ Plot2D createPlot()
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
     plot.drawDots(librationPointsX, librationPointsY).label("libration points");
-
-    return plot;
+    plotCloseUp.drawDots( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
 }
 
-void addPointToPlot(Plot2D &plot, const DVector & point, string label)
+void addPointToPlots(Plot2D &plot, Plot2D &plotCloseUp, const DVector & point, string label)
 {
     plot.drawDots(vector<double>({point[0]}), vector<double>({point[1]})).label(label);
+    plotCloseUp.drawDots(vector<double>({point[0]}), vector<double>({point[1]})).label(label);
 }
 
-void addPointToPlot(Plot2D &plot, const CVector & point, string label)
+void addPointToPlots(Plot2D &plot, Plot2D &plotCloseUp, const CVector & point, string label)
 {
-    addPointToPlot(plot, DVector({point[0].real(), point[1].real()}), label);
+    addPointToPlots(plot, plotCloseUp, DVector({point[0].real(), point[1].real()}), label);
 }
 
-void addCurveToPlot(Plot2D &plot, const vector<double> &x, const vector<double> &y, string label)
+void addCurveToPlots(Plot2D &plot, Plot2D &plotCloseUp, const vector<double> &x, const vector<double> &y, string label)
 {
     plot.drawCurve(x, y).label(label);
+    plotCloseUp.drawCurve(x, y).label(label);
 }
 
-void showAndSavePlot(Plot2D &plot)
+void showAndSavePlot(Plot2D &plot, string filename)
 {
     Figure fig({{plot}});
     Canvas canvas({{fig}});
     canvas.size(1000, 1000);
 
     canvas.show();
-    canvas.save("experiments/periodic-orbit/plot.pdf");
+    canvas.save("experiments/periodic-orbit/" + filename);
+}
+
+void showAndSavePlots(Plot2D &plot, Plot2D &plotCloseUp)
+{
+    showAndSavePlot(plot, "plot.pdf");
+    showAndSavePlot(plotCloseUp, "plotCloseUp.pdf");
 }
 
 bool isNearL4(const LDVector &point, double epsilon)
@@ -80,12 +99,27 @@ bool isNearL4(const LDVector &point, double epsilon)
     return (abs(point[0] - L4[0]) < epsilon && abs(point[1] - L4[1]) < epsilon);
 }
 
+// phi = id - Q
+// phi^{-1} = id + Q + Q^2 + Q^3 + ... + Q^deg
+CVector inverse(const Polynomial<Complex> &phi, const CVector &x, int deg)
+{
+    CVector result = x;
+    CVector curr = x;
+    for(int i = 0; i < deg; ++i)
+    {
+        curr = curr - phi(curr); // Q(curr)
+        result += curr;
+    }
+    return result;
+}
+
 int main()
 {
-    DVector initialPoint({0, -0.576003306698015024546, -0.451540030090179645464, 0 });
+    double period = 30.4301813921308539346;
+    LDVector initialPoint({0, -0.5760033133504633678, -0.4515400305608129141, 0});
     CVector initialPointC({initialPoint[0], initialPoint[1], initialPoint[2], initialPoint[3]});
 
-    double epsilon = 0.01; // normal form will be used on initialPoint + [-epsilon, epsilon]x[-epsilon, epsilon]
+    double epsilon = 0.001; // normal form will be used on initialPoint + [-epsilon, epsilon]x[-epsilon, epsilon]
 
     int methodDegree = 20;
     TestCasesCollection testCases(methodDegree+1);
@@ -96,15 +130,14 @@ int main()
     file.close();
     cout << "normal form imported" << endl;
 
-    LDVector point(initialPoint);
-    double finalTime = 31; // max time in integration
-    auto intSolution = integrateSolution(testCases.PCR3BP_dmap, point, 10, 0, finalTime);
+    double finalTime = period / 2; // max time in integration
+    auto intSolution = integrateSolution(testCases.PCR3BP_dmap, initialPoint, 10, 0, finalTime);
 
     int N = 1000; // numer of samples in a unit of time
-    double dt = 1. / N;
+    double intDt = 1. / N;
 
-    auto plot = createPlot();
-    addPointToPlot(plot, initialPoint, "initial point");
+    Plot2D plot, plotCloseUp;
+    initializePlots(plot, plotCloseUp, epsilon);
 
     vector<double> solverX, solverY, solverX2, solverY2;
     solverX.reserve(N);
@@ -112,44 +145,46 @@ int main()
     solverX2.reserve(N);
     solverY2.reserve(N);
 
-    double t = 0;
     CVector lastPoint;
-    for( ; t <= finalTime; t += dt)
+    double timeLeft;
+    for(double t = 0; t <= finalTime; t += intDt)
     {
         if(isNearL4(intSolution(t), epsilon))
         {
             lastPoint = CVector({intSolution(t)[0], intSolution(t)[1], intSolution(t)[2], intSolution(t)[3]});
+            timeLeft = finalTime-t;
             break;
         }
 
         solverX.push_back(intSolution(t)[0]);
         solverY.push_back(intSolution(t)[1]);
-        solverX2.push_back(-intSolution(t)[0]); // symmetry with respect to mass
+        // symmetry with respect to mass
+        solverX2.push_back(-intSolution(t)[0]); 
         solverY2.push_back(intSolution(t)[1]); 
     }
-    cout << "t: " << t << endl;
-    addCurveToPlot(plot, solverX, solverY, "integrated solution");
-    addCurveToPlot(plot, solverX2, solverY2, "symmetric trajectory");
+
+    addCurveToPlots(plot, plotCloseUp, solverX, solverY, "integrated solution");
+    addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "symmetric trajectory");
 
     vector<double> nfX, nfY;
-    for( t = 0; ; t += dt)
-    {
-        CVector normalFormSolC = normalForm.solution(t, testCase.diagonalization.toDiag(lastPoint));
-        normalFormSolC = testCase.diagonalization.toOriginal(normalForm.getPhi()(normalFormSolC));
-        LDVector normalFormSol({normalFormSolC[0].real(), normalFormSolC[1].real()});
+    double nfDt = 0.1;
+    auto newInitialPoint = inverse(normalForm.getPhi(), testCase.diagonalization.toDiag(lastPoint), 100);
 
-        if(!isNearL4(normalFormSol, epsilon))
-            break;
+    for(double t = 0; t < 2*timeLeft; t += nfDt)
+    {
+        CVector normalFormSolC = normalForm.solution(t, newInitialPoint);
+        normalFormSolC = testCase.diagonalization.toOriginal(normalForm.getPhi()(normalFormSolC));
+        DVector normalFormSol({normalFormSolC[0].real(), normalFormSolC[1].real()});
 
         nfX.push_back(normalFormSol[0]);
         nfY.push_back(normalFormSol[1]);
     }
-    cout << "t: " << t << endl;
+
     cout << "diffLeft:\n " <<  (nfX.front() - solverX.back()) << " " << (nfY.front() - solverY.back()) << endl;
     cout << "diffRight:\n" << (nfX.back() - solverX2.back()) << " " << (nfY.back() - solverY2.back()) << endl;
-    addCurveToPlot(plot, nfX, nfY, "normal form solution");
 
-    showAndSavePlot(plot);
+    addCurveToPlots(plot, plotCloseUp, nfX, nfY, "normal form solution");
+    showAndSavePlots(plot, plotCloseUp);
 
     return 0;
 }
