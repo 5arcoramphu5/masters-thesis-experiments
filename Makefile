@@ -1,6 +1,8 @@
 # a list of all the programs in your package
-PROGS = experiments/comparing-trajectories-test/main \
+PROGS = \
 	experiments/calculate-normal-form/main \
+	experiments/comparing-trajectories-test/main \
+	experiments/comparing-derivatives-test/main \
 	experiments/periodic-orbit/main \
 	experiments/plots/symmetric_orbits \
 	experiments/periodic-orbit-for-given-period-integration/main \
@@ -8,13 +10,13 @@ PROGS = experiments/comparing-trajectories-test/main \
 	experiments/periodic-orbit-for-given-period-normal-form-2/main
 
 # a list of all your units to be linked with your programs
-OTHERS = shared/test_cases/test_cases_collection
+OTHERS = shared/test_cases/test_cases_collection shared/calculations/calculations
 
 # path to normal-forms repository
 NFDIR = ../normal-forms/.obj/source
 
 # files to link from normal-forms repository
-NFOBJFILES = ${NFDIR}/NormalFormFinder/helperFunctions.o
+NFOBJFILES = ${NFDIR}/NormalFormFinder/helperFunctions.o  ${NFDIR}/NormalFormFinder/PseudoNormalForm.o
 
 # path to directory, where script capd-config is located
 CAPDBINDIR = ~/libraries/CAPD/build/bin/

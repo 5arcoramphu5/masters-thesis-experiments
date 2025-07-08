@@ -3,18 +3,14 @@
 #include <vector>
 #include <sciplot/sciplot.hpp>
 
-#include "capd/capdlib.h"
-#include "capd/matrixAlgorithms/lib.h"
-#include "../../../normal-forms/source/NormalFormFinder/NormalFormFinder.hpp"
-
+#include "../../shared/calculations/calculations.h"
 #include "../../shared/test_cases/test_cases_collection.h"
 
 using namespace std;
 using namespace capd;
-using namespace capd::matrixAlgorithms;
 using namespace sciplot;
 
-#define ALG_LOGGER Logger<ProgressIndication>
+// INTEGRATION --------------------------------------------------------
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, int order, double initTime, double finalTime)
 {
@@ -26,6 +22,8 @@ LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, i
     timeMap(finalTime, point, solution);
     return solution;
 }
+
+// PLOTTING ----------------------------------------------------------
 
 void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
 {
@@ -88,100 +86,6 @@ void showAndSavePlots(Plot2D &plot, Plot2D &plotCloseUp)
     showAndSavePlot(plotCloseUp, "plotCloseUp.pdf");
 }
 
-bool isNearL4(const LDVector &point, double epsilon)
-{
-    DVector L4({0, 0.866025403784438646763723170753});
-    return (abs(point[0] - L4[0]) < epsilon && abs(point[1] - L4[1]) < epsilon);
-}
-
-// phi = id - Q
-// phi^{-1} = id + Q + Q^2 + Q^3 + ... + Q^deg
-CVector inverse(const Polynomial<Complex> &phi, const CVector &x, int deg)
-{
-    CVector result = x;
-    CVector curr = x;
-    for(int i = 0; i < deg; ++i)
-    {
-        curr = curr - phi(curr); // Q(curr)
-        result += curr;
-    }
-    return result;
-}
-
-CMatrix inverseDer(const Polynomial<Complex> &phi, const CVector &x, int deg)
-{
-    CMatrix result = CMatrix::Identity(4);
-    CMatrix currDer = CMatrix::Identity(4);
-    CVector currVal = x;
-
-    for(int i = 0; i < deg; ++i)
-    {
-        currVal = currVal - phi(currVal); // Q(curr)
-        currDer = (-phi.derivative(currVal) + CMatrix::Identity(4)) * currDer; // Df(Q(curr)) * Df(f^{-1}(x))
-        result += currDer;
-    }
-    return result;
-}
-
-
-CMatrix normalFormSolutionDerivative(double t, CVector point, const PseudoNormalForm &normalForm)
-{
-    CVector mulV({ point[0]*point[1], point[2]*point[3]});
-    CMatrix derMul({ // derivative of (x[0]*x[1], x[2]*x[3])
-        { point[1], point[0], 0, 0},
-        { 0, 0, point[2], point[3]}
-    });
-
-    auto a1 = normalForm.geta1()(mulV)[0];
-    auto a2 = normalForm.geta2()(mulV)[0]; 
-
-    auto derA1 = normalForm.geta1().derivative(mulV);
-    auto derA2 = normalForm.geta2().derivative(mulV);
-
-    auto derA1mul = (derA1 * derMul)[0];
-    auto derA2mul = (derA2 * derMul)[0];
-    
-    auto exp1 = exp(a1*t);
-    auto exp2 = exp(-a1*t);
-    auto exp3 = exp(a2*t);
-    auto exp4 = exp(-a2*t);
-
-    Complex one = 1;
-
-    CMatrix result({
-        { (one + derA1mul[0]*point[0]) * exp1, point[0]*exp1*derA1mul[1], point[0]*exp1*derA1mul[2], point[0]*exp1*derA1mul[3] },
-        { -point[1]*exp2*derA1mul[0], (one - derA1mul[1]*point[1]) * exp2, -point[1]*exp2*derA1mul[2], -point[1]*exp2*derA1mul[3] },
-        { point[2]*exp3*derA2mul[0], point[2]*exp3*derA2mul[1], (one + derA2mul[2]*point[2]) * exp3, point[2]*exp3*derA2mul[3] },
-        { -point[3]*exp4*derA2mul[0], -point[3]*exp4*derA2mul[1], -point[3]*exp4*derA2mul[2], (one - derA2mul[3]*point[3]) * exp4}
-    });
-
-    return result;
-}
-
-LDMatrix normalFormOriginalSolutionDerivative(double t, const LDVector &point, const PseudoNormalForm &normalForm, const Diagonalization<Complex> &diag)
-{
-    CVector pointC({point[0], point[1], point[2], point[3]});
-    CVector diagPoint = diag.toDiag(pointC);
-
-    int inverseDeg = 100;
-
-    CVector invPhiDiag = inverse(normalForm.getPhi(), diagPoint, inverseDeg);
-    CVector solInvPhiDIag = normalForm.solution(t, invPhiDiag);
-
-    CMatrix derPhi = normalForm.getPhi().derivative(solInvPhiDIag);
-    CMatrix derNFSol = normalFormSolutionDerivative(t, invPhiDiag, normalForm);
-    CMatrix derInvPhi = inverseDer(normalForm.getPhi(), diagPoint, inverseDeg);
-
-    CMatrix resultComplex = diag.getinvJ() * derPhi * derNFSol * derInvPhi * diag.getJ();
-
-    LDMatrix result(4, 4);
-    for(int i = 0; i < 4; ++i)
-        for(int j = 0; j < 4; ++j)
-            result[i][j] = resultComplex[i][j].real();
-
-    return result;
-}
-
 // otrzymuje (y, v_x) 
 // oblicza punkt końcowy dla casu halfPeriod przy punkcie początkowym (0, y, v_x, 0)
 // zwraca rzutowanie punktu końcowego na zmienne (x, v_y)
@@ -195,10 +99,10 @@ pair<LDVector, LDMatrix> computeF(const LDVector &initialPoint, double halfPerio
     // compute value of the function
     LDVector point({0, initialPoint[0], initialPoint[1], 0});
     LDMatrix intDer;
-    timeMap(halfPeriod, point, intDer);
+    point = timeMap(intTime, point, intDer);
 
     CVector lastPoint({point[0], point[1], point[2], point[3]});
-    auto newInitialPoint = inverse(normalForm.getPhi(), diag.toDiag(lastPoint), 100);
+    auto newInitialPoint = inverse(normalForm.getPhi(), diag.toDiag(lastPoint));
 
     CVector normalFormSol = normalForm.solution(halfPeriod - intTime, newInitialPoint);
     normalFormSol = diag.toOriginal(normalForm.getPhi()(normalFormSol));
@@ -212,21 +116,29 @@ pair<LDVector, LDMatrix> computeF(const LDVector &initialPoint, double halfPerio
 
 LDVector getInitialPoint(double halfPeriod, double intTime, const LDVector &approximation, LDMap &map, const PseudoNormalForm &normalForm, const Diagonalization<Complex> &diag, double eps)
 {
-    int solverOrder = 15;
+    int solverOrder = 25;
     int maxIters = 20;
     LDVector point(approximation);
+
+    auto bestPoint = point;
+    optional<LDVector> bestF = std::nullopt;
+
+    long double damp = 1;
 
     for(int i = 0; i < maxIters; ++i)
     {
         auto [f, f_der] = computeF(point, halfPeriod, intTime, map, solverOrder, normalForm, diag);
 
-        if(abs(f[0]) < eps && abs(f[1]) < eps)
-        {
-            cout << "found initial point: " << point << endl;
-            cout << "value: " << f << endl; 
-            break;
-        }
         cout << f << endl;
+
+        if(!bestF.has_value() || abs(f) < abs(bestF.value()))
+        {
+            bestF = f;
+            bestPoint = point;
+        }
+
+        if(abs(f[0]) < eps && abs(f[1]) < eps)
+            break;
 
         // trunceting matrix to take projections into account
         LDMatrix der({ {f_der[0][1], f_der[0][2]}, {f_der[3][1], f_der[3][2]}});
@@ -235,27 +147,41 @@ LDVector getInitialPoint(double halfPeriod, double intTime, const LDVector &appr
         long double det = der[0][0]*der[1][1] - der[0][1]*der[1][0];
         LDMatrix invDer({   {der[1][1]/det, -der[0][1]/det}, 
                             {-der[1][0]/det, der[0][0]/det} });
+
         // invDer * f
-        LDVector invDerF({invDer[0][0]*f[0] + invDer[0][1]*f[1], invDer[1][0]*f[0] + invDer[1][1]*f[1] });
-        point =  point - invDerF;
+        LDVector invDerF = invDer * f;
+
+        // damped Newton's method
+        while(damp > 1e-10)
+        {
+            cout << ".";
+            LDVector newPoint = point - damp*invDerF;
+            auto [newF, newFDer] = computeF(newPoint, halfPeriod, intTime, map, solverOrder, normalForm, diag);
+
+            if(abs(newF) > abs(f))
+                damp *= 0.5; // if the function value is worse, reduce the step
+            else
+                break;
+        }
+        
+        point = point - damp*invDerF;
     }
 
-    return LDVector({0, point[0], point[1], 0});
+    return LDVector({0, bestPoint[0], bestPoint[1], 0});
 }
 
 int main(int argc, char* argv[])
 {
-    if(argc != 4) throw runtime_error("wrong number of arguments");
+    if(argc != 5) throw runtime_error("wrong number of arguments");
 
-    double period, intTime, eps;
-    period = atof(argv[1]);
-    intTime = atof(argv[2]);
-    eps = atof(argv[3]);
+    double period = atof(argv[1]);
+    double intTime = atof(argv[2]);
+    double eps = atof(argv[3]);
+    int methodDegree = atof(argv[4]);
 
     if(intTime >= period/2)
         throw runtime_error("integration time must be less than half of the period");
     
-    int methodDegree = 20;
     double timeLeft = period/2 - intTime;
 
     cout << std::setprecision(19);
@@ -299,10 +225,11 @@ int main(int argc, char* argv[])
         vector<double> nfX, nfY;
         double nfDt = timeLeft / N;
         cout << nfDt << endl;
+        
         CVector lastPoint = CVector({intSolution(intTime)[0], intSolution(intTime)[1], intSolution(intTime)[2], intSolution(intTime)[3]});
-        auto newInitialPoint = inverse(normalForm.getPhi(), testCase.diagonalization.toDiag(lastPoint), 100);
+        auto newInitialPoint = inverse(normalForm.getPhi(), testCase.diagonalization.toDiag(lastPoint));
 
-        for(double t = 0; t <= 4*timeLeft; t += nfDt)
+        for(double t = 0; t <= 2*timeLeft; t += nfDt)
         {
             CVector normalFormSolC = normalForm.solution(t, newInitialPoint);
             normalFormSolC = testCase.diagonalization.toOriginal(normalForm.getPhi()(normalFormSolC));

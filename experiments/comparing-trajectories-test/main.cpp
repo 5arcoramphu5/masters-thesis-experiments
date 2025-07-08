@@ -12,7 +12,7 @@ using namespace capd;
 using namespace sciplot;
 
 #define INIT_TIME 0
-#define FINAL_TIME 5
+#define FINAL_TIME 1
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int order)
 {
@@ -88,10 +88,6 @@ void performTest(LDVector &realOriginalPoint, const CVector &normalFormPoint, co
     double dt = double(FINAL_TIME - INIT_TIME) / N;
 
     vector<double> intX, intY, normalFormX, normalFormY;
-    intX.reserve(N); 
-    intY.reserve(N); 
-    normalFormX.reserve(N);
-    normalFormY.reserve(N);
 
     for(double t = INIT_TIME; t <= FINAL_TIME; t += dt)
     {
