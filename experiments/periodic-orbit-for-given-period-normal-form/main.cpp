@@ -6,6 +6,10 @@
 #include "../../shared/calculations/calculations.h"
 #include "../../shared/test_cases/test_cases_collection.h"
 
+#define PLOT_SCALE 1000
+#define L4_Y 0.866025403784438646763723170753
+#define PLOT_SIZE_PIXELS 300
+
 using namespace std;
 using namespace capd;
 using namespace sciplot;
@@ -35,18 +39,19 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
     plot.palette("set1");
     plotCloseUp.palette("set1");
 
-    double range = 1.2;
-    plot.xrange(-range, range);
-    plot.yrange(-range, range);
-    plot.size(1000, 1000);
+    plot.xrange(-1, 1);
+    plot.yrange(-0.7, 1.3);
+    plot.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
-    LDVector L4({0, 0.866025403784438646763723170753});
+    LDVector L4({0, L4_Y});
     LDVector lastPointInt2D({lastPointInt[0], lastPointInt[1]});
+    
     double epsilon = (lastPointInt2D - L4).euclNorm();
-    double scale = 3;
-    plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
-    plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
-    plotCloseUp.size(1000, 1000);
+    double rangeMul = 10*PLOT_SCALE;
+
+    plotCloseUp.xrange(-epsilon*rangeMul, epsilon*rangeMul);
+    plotCloseUp.yrange(L4_Y-epsilon*rangeMul, L4_Y+epsilon*rangeMul);
+    plotCloseUp.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     plot.legend()
         .atOutsideBottom()
@@ -60,21 +65,30 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
     // drawing libration points
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
-    plot.drawDots(librationPointsX, librationPointsY).label("libration points");
-    plotCloseUp.drawDots( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
+    plot.drawPoints(librationPointsX, librationPointsY).label("libration points");
+    plotCloseUp.drawPoints( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
 }
 
-void addCurveToPlots(Plot2D &plot, Plot2D &plotCloseUp, const vector<double> &x, const vector<double> &y, string label)
+void addCurveToPlots(Plot2D &plot, Plot2D &plotCloseUp, const vector<long double> &x, const vector<long double> &y, string label)
 {
     plot.drawCurve(x, y).label(label);
-    plotCloseUp.drawCurve(x, y).label(label);
+
+    int n = x.size();
+    vector<long double> x_scaled(n), y_scaled(n);
+    for(int i = 0; i < n; ++i)
+    {
+        x_scaled[i] = PLOT_SCALE * x[i];
+        y_scaled[i] = PLOT_SCALE * (y[i] - L4_Y) + L4_Y;
+    }
+
+    plotCloseUp.drawCurve(x_scaled, y_scaled).label(label);
 }
 
 void showAndSavePlot(Plot2D &plot, string filename)
 {
     Figure fig({{plot}});
     Canvas canvas({{fig}});
-    canvas.size(1000, 1000);
+    canvas.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     canvas.show();
     canvas.save("experiments/periodic-orbit-for-given-period-normal-form/" + filename);
@@ -123,13 +137,9 @@ LDVector getInitialPoint(double halfPeriod, double intTime, const LDVector &appr
     auto bestPoint = point;
     optional<LDVector> bestF = std::nullopt;
 
-    long double damp = 1;
-
     for(int i = 0; i < maxIters; ++i)
     {
         auto [f, f_der] = computeF(point, halfPeriod, intTime, map, solverOrder, normalForm, diag);
-
-        cout << f << endl;
 
         if(!bestF.has_value() || abs(f) < abs(bestF.value()))
         {
@@ -137,8 +147,7 @@ LDVector getInitialPoint(double halfPeriod, double intTime, const LDVector &appr
             bestPoint = point;
         }
 
-        if(abs(f[0]) < eps && abs(f[1]) < eps)
-            break;
+        cout << f << endl;
 
         // trunceting matrix to take projections into account
         LDMatrix der({ {f_der[0][1], f_der[0][2]}, {f_der[3][1], f_der[3][2]}});
@@ -150,23 +159,10 @@ LDVector getInitialPoint(double halfPeriod, double intTime, const LDVector &appr
 
         // invDer * f
         LDVector invDerF = invDer * f;
-
-        // damped Newton's method
-        while(damp > 1e-10)
-        {
-            cout << ".";
-            LDVector newPoint = point - damp*invDerF;
-            auto [newF, newFDer] = computeF(newPoint, halfPeriod, intTime, map, solverOrder, normalForm, diag);
-
-            if(abs(newF) > abs(f))
-                damp *= 0.5; // if the function value is worse, reduce the step
-            else
-                break;
-        }
         
-        point = point - damp*invDerF;
+        point = point - invDerF;
     }
-
+    
     return LDVector({0, bestPoint[0], bestPoint[1], 0});
 }
 
@@ -196,7 +192,7 @@ int main(int argc, char* argv[])
 
     LDVector approximation({-0.576003306698015024546, -0.451540030090179645464}); // w przybliżeniu orbita okresowa zaczyna się w (0, x, y, 0)
     auto initialPoint = getInitialPoint(period/2, intTime, approximation, testCases.PCR3BP_dmap, normalForm, testCase.diagonalization, eps);
-    cout << "initial point: " << initialPoint << endl;
+
     CVector initialPointC({initialPoint[0], initialPoint[1], initialPoint[2], initialPoint[3]});
 
     auto intSolution = integrateSolution(testCases.PCR3BP_dmap, initialPoint, 10, 0, intTime);
@@ -207,7 +203,7 @@ int main(int argc, char* argv[])
     Plot2D plot, plotCloseUp;
     initializePlots(plot, plotCloseUp, intSolution(intTime));
 
-    vector<double> solverX, solverY, solverX2, solverY2;
+    vector<long double> solverX, solverY, solverX2, solverY2;
 
     for(double t = 0; t <= intTime; t += intDt)
     {
@@ -222,7 +218,7 @@ int main(int argc, char* argv[])
 
     if(timeLeft > 0)
     {
-        vector<double> nfX, nfY;
+        vector<long double> nfX, nfY;
         double nfDt = timeLeft / N;
         cout << nfDt << endl;
         

@@ -14,7 +14,9 @@ using namespace capd;
 using namespace capd::matrixAlgorithms;
 using namespace sciplot;
 
-#define ALG_LOGGER Logger<ProgressIndication>
+#define PLOT_SCALE 1000
+#define L4_Y 0.866025403784438646763723170753
+#define PLOT_SIZE_PIXELS 300
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, int order, double initTime, double finalTime)
 {
@@ -37,15 +39,14 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, double epsilon)
     plot.palette("set1");
     plotCloseUp.palette("set1");
 
-    double range = 1.2;
-    plot.xrange(-range, range);
-    plot.yrange(-range, range);
-    plot.size(1000, 1000);
+    plot.xrange(-1, 1);
+    plot.yrange(-0.7, 1.3);
+    plot.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
-    double scale = 3;
+    double scale = 10*PLOT_SCALE;
     plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
     plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
-    plotCloseUp.size(1000, 1000);
+    plotCloseUp.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     plot.legend()
         .atOutsideBottom()
@@ -59,21 +60,30 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, double epsilon)
     // drawing libration points
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
-    plot.drawDots(librationPointsX, librationPointsY).label("libration points");
-    plotCloseUp.drawDots( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
+    plot.drawPoints(librationPointsX, librationPointsY).label("libration points");
+    plotCloseUp.drawPoints( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
 }
 
 void addCurveToPlots(Plot2D &plot, Plot2D &plotCloseUp, const vector<double> &x, const vector<double> &y, string label)
 {
     plot.drawCurve(x, y).label(label);
-    plotCloseUp.drawCurve(x, y).label(label);
+
+    int n = x.size();
+    vector<long double> x_scaled(n), y_scaled(n);
+    for(int i = 0; i < n; ++i)
+    {
+        x_scaled[i] = PLOT_SCALE * x[i];
+        y_scaled[i] = PLOT_SCALE * (y[i] - L4_Y) + L4_Y;
+    }
+
+    plotCloseUp.drawCurve(x_scaled, y_scaled).label(label);
 }
 
 void showAndSavePlot(Plot2D &plot, string filename)
 {
     Figure fig({{plot}});
     Canvas canvas({{fig}});
-    canvas.size(1000, 1000);
+    canvas.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     canvas.show();
     canvas.save("experiments/periodic-orbit-for-given-period-integration/" + filename);
@@ -83,12 +93,6 @@ void showAndSavePlots(Plot2D &plot, Plot2D &plotCloseUp)
 {
     showAndSavePlot(plot, "plot.pdf");
     showAndSavePlot(plotCloseUp, "plotCloseUp.pdf");
-}
-
-bool isNearL4(const LDVector &point, double epsilon)
-{
-    DVector L4({0, 0.866025403784438646763723170753});
-    return (abs(point[0] - L4[0]) < epsilon && abs(point[1] - L4[1]) < epsilon);
 }
 
 // phi = id - Q
@@ -124,9 +128,8 @@ pair<LDVector, LDMatrix> computeF(const LDVector &initialPoint, double halfPerio
     return make_pair(result, der);
 }
 
-LDVector getInitialPoint(double halfPeriod, const LDVector &approximation, LDMap &map)
+LDVector getInitialPoint(double halfPeriod, const LDVector &approximation, LDMap &map, double eps)
 {
-    long double eps = 1e-13;
     int solverOrder = 15;
     LDVector point(approximation);
 
@@ -136,6 +139,8 @@ LDVector getInitialPoint(double halfPeriod, const LDVector &approximation, LDMap
 
         if(abs(f[0]) < eps && abs(f[1]) < eps)
             break;
+
+        cout << "f: " << f << endl;
 
         // trunceting matrix to take projections into account
         LDMatrix der({ {f_der[0][1], f_der[0][2]}, {f_der[3][1], f_der[3][2]}});
@@ -154,24 +159,19 @@ LDVector getInitialPoint(double halfPeriod, const LDVector &approximation, LDMap
 
 int main(int argc, char* argv[])
 {
-    double period = 30.4301813921308539346;
-    double epsilon = 0.001; // normal form will be used on initialPoint + [-epsilon, epsilon]x[-epsilon, epsilon]
-    int methodDegree = 20;
+    if(argc != 3) throw runtime_error("wrong number of arguments");
+
+    double period = atof(argv[1]);
+    double eps = atof(argv[2]);
 
     cout << std::setprecision(19);
 
-    TestCasesCollection testCases(methodDegree+1);
+    TestCasesCollection testCases(20);
     auto &testCase = testCases.PCR3BP_L4;
 
     LDVector approximation({-0.576003306698015024546, -0.451540030090179645464}); // w przybliżeniu orbita okresowa zaczyna się w (0, x, y, 0)
-    auto initialPoint = getInitialPoint(period/2, approximation, testCases.PCR3BP_dmap);
+    auto initialPoint = getInitialPoint(period/2, approximation, testCases.PCR3BP_dmap, eps);
     cout << "initial point: " << initialPoint << endl;
-    CVector initialPointC({initialPoint[0], initialPoint[1], initialPoint[2], initialPoint[3]});
-
-    ifstream file("shared/precalculated-normal-forms/PCR3BP_L4_deg" + to_string(methodDegree) + ".txt");
-    auto normalForm = PseudoNormalForm::deserialize(file);
-    file.close();
-    cout << "normal form imported" << endl;
 
     double finalTime = period / 2; // max time in integration
     auto intSolution = integrateSolution(testCases.PCR3BP_dmap, initialPoint, 10, 0, finalTime);
@@ -179,58 +179,26 @@ int main(int argc, char* argv[])
     int N = 1000; // numer of samples in a unit of time
     double intDt = 1. / N;
 
-    Plot2D plot, plotCloseUp;
-    initializePlots(plot, plotCloseUp, epsilon);
-
     vector<double> solverX, solverY, solverX2, solverY2;
-    solverX.reserve(N);
-    solverY.reserve(N);
-    solverX2.reserve(N);
-    solverY2.reserve(N);
+    double epsilon = 1; 
 
-    CVector lastPoint;
-    double timeLeft = 0;
     for(double t = 0; t <= finalTime; t += intDt)
     {
-        if(isNearL4(intSolution(t), epsilon))
-        {
-            lastPoint = CVector({intSolution(t)[0], intSolution(t)[1], intSolution(t)[2], intSolution(t)[3]});
-            timeLeft = finalTime-t;
-            break;
-        }
-
         solverX.push_back(intSolution(t)[0]);
         solverY.push_back(intSolution(t)[1]);
         // symmetry with respect to mass
         solverX2.push_back(-intSolution(t)[0]); 
         solverY2.push_back(intSolution(t)[1]); 
+
+        LDVector diff({intSolution(t)[0], intSolution(t)[1] - 0.866025403784438646763723170753});
+        if(diff.euclNorm() < epsilon)
+            epsilon = diff.euclNorm();
     }
     
+    Plot2D plot, plotCloseUp;
+    initializePlots(plot, plotCloseUp, epsilon);
     addCurveToPlots(plot, plotCloseUp, solverX, solverY, "integrated solution");
     addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "symmetric trajectory");
-
-    if(timeLeft > 0)
-    {
-        vector<double> nfX, nfY;
-        double nfDt = 0.1;
-        auto newInitialPoint = inverse(normalForm.getPhi(), testCase.diagonalization.toDiag(lastPoint), 100);
-
-        for(double t = 0; t < 2*timeLeft; t += nfDt)
-        {
-            CVector normalFormSolC = normalForm.solution(t, newInitialPoint);
-            normalFormSolC = testCase.diagonalization.toOriginal(normalForm.getPhi()(normalFormSolC));
-            LDVector normalFormSol({normalFormSolC[0].real(), normalFormSolC[1].real()});
-
-            nfX.push_back(normalFormSol[0]);
-            nfY.push_back(normalFormSol[1]);
-        }
-
-        cout << "diffLeft:\n " <<  (nfX.front() - solverX.back()) << " " << (nfY.front() - solverY.back()) << endl;
-        cout << "diffRight:\n" << (nfX.back() - solverX2.back()) << " " << (nfY.back() - solverY2.back()) << endl;
-
-        addCurveToPlots(plot, plotCloseUp, nfX, nfY, "normal form solution");
-    }
-
     showAndSavePlots(plot, plotCloseUp);
 
     return 0;

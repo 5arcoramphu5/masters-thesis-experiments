@@ -14,6 +14,8 @@ using namespace capd;
 using namespace capd::matrixAlgorithms;
 using namespace sciplot;
 
+#define PLOT_SCALE 1000
+#define L4_Y 0.866025403784438646763723170753
 #define SOLVER_ORDER 10
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, const LDVector &initialPoint, double initTime, double finalTime)
@@ -45,9 +47,9 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
     LDVector L4({0, 0.866025403784438646763723170753});
     LDVector lastPointInt2D({lastPointInt[0], lastPointInt[1]});
     double epsilon = (lastPointInt2D - L4).euclNorm();
-    double scale = 3;
-    plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
-    plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
+    double rangeMul = 10*PLOT_SCALE;
+    plotCloseUp.xrange(-epsilon*rangeMul, epsilon*rangeMul);
+    plotCloseUp.yrange(L4_Y-epsilon*rangeMul, L4_Y+epsilon*rangeMul);
     plotCloseUp.size(1000, 1000);
 
     plot.legend()
@@ -69,7 +71,16 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
 void addCurveToPlots(Plot2D &plot, Plot2D &plotCloseUp, const vector<double> &x, const vector<double> &y, string label)
 {
     plot.drawCurve(x, y).label(label);
-    plotCloseUp.drawCurve(x, y).label(label);
+
+    int n = x.size();
+    vector<long double> x_scaled(n), y_scaled(n);
+    for(int i = 0; i < n; ++i)
+    {
+        x_scaled[i] = PLOT_SCALE * x[i];
+        y_scaled[i] = PLOT_SCALE * (y[i] - L4_Y) + L4_Y;
+    }
+
+    plotCloseUp.drawCurve(x_scaled, y_scaled).label(label);
 }
 
 void showAndSavePlot(Plot2D &plot, string filename, string plotTitle)
@@ -159,7 +170,7 @@ pair<LDVector, LDVector> getNormalFormInitialPoint(double halfPeriod, double int
 
     // (y, dx, x1, y1, dx1, dx2)
     LDVector point({initialPoint[1], initialPoint[2], afterInt[0], afterInt[1], afterInt[2], afterInt[3]});
-    int maxIters = 5;
+    int maxIters = 20;
 
     auto bestPoint = point;
     optional<LDVector> bestF = std::nullopt;
@@ -246,7 +257,7 @@ int main(int argc, char* argv[])
     CVector nfInitialPointC({nfInitialPoint[0], nfInitialPoint[1], nfInitialPoint[2], nfInitialPoint[3]});
     auto nfInitialPointDiag = inverse(normalForm.getPhi(), testCase.diagonalization.toDiag(nfInitialPointC));
 
-    for(double t = 0; t <= 2*timeLeft; t += nfDt)
+    for(double t = 0; t <= timeLeft; t += nfDt)
     {
         CVector nfSol = normalForm.solution(t, nfInitialPointDiag);
         CVector nfSolOrigCoords = testCase.diagonalization.toOriginal(normalForm.getPhi()(nfSol));
@@ -255,8 +266,8 @@ int main(int argc, char* argv[])
         nfY.push_back(nfSolOrigCoords[1].real());
     }
 
-    cout << "diffLeft:\n " <<  (nfX.front() - solverX2.front()) << " " << (nfY.front() - solverY2.front()) << endl;
-    cout << "diffRight:\n" << (nfX.back() - solverX.front()) << " " << (nfY.back() - solverY.front()) << endl;
+    cout << "diffLeft:\n " <<  (nfX.front() - solverX.back()) << " " << (nfY.front() - solverY.back()) << endl;
+    cout << "diffRight:\n" << (nfX.back() - solverX2.back()) << " " << (nfY.back() - solverY2.back()) << endl;
 
     Plot2D plot, plotCloseUp;
     initializePlots(plot, plotCloseUp, intSolution(intTime));
