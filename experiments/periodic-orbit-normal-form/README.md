@@ -1,0 +1,3 @@
+Program draws a plot of a periodic orbit of period 60.8603627843 in the PCR3BP with equal masses. Most of its trajectory is computed with numerical integration from [the CAPD library](https://github.com/CAPDgroup/CAPD). The area in close neighbourhood of the $L_4$ libration point is calculated with the normal form from [the `normal-forms` repository](https://github.com/5arcoramphu5/normal-forms).
+
+The plot demonstrates that the normal form can be combined with numerical integration to compute periodic orbits in the PCR3BP. The results are compared to results of approach that only uses numerical integration implmented in `periodic-orbit` directory.

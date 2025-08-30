@@ -17,7 +17,7 @@ using namespace sciplot;
 
 #define L4_Y 0.866025403784438646763723170753 // y coordinate of L4 point in PCR3BP
 
-#define PLOT_SIZE_PIXELS 300
+#define PLOT_SIZE_PIXELS 500
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int order)
 {
@@ -32,8 +32,14 @@ LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int orde
 Plot2D initializePlot(double range)
 {
     Plot2D plot;
-    plot.xlabel("x");
-    plot.ylabel("y");
+
+    int fontSize = 30;
+    plot.fontSize(fontSize);
+
+    plot.xlabel("x").fontSize(fontSize);
+    plot.ylabel("y").fontSize(fontSize);
+    plot.xtics().fontSize(fontSize-10);
+    plot.ytics().fontSize(fontSize-10);
     plot.palette("set1");
 
     plot.xrange(-range, range);
@@ -48,7 +54,7 @@ Plot2D initializePlot(double range)
     // drawing libration points
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, L4_Y, -L4_Y, 0, 0});
-    plot.drawPoints(librationPointsX, librationPointsY).label("libration points");
+    plot.drawPoints(librationPointsX, librationPointsY).label("punkty libracji");
 
     return plot;
 }
@@ -108,8 +114,8 @@ void performTest(LDVector &realOriginalPoint, const CVector &normalFormPoint, co
     }
     cout << "max diff: " << maxDiff << endl;
 
-    addCurveToPlot(plot, intX, intY, "integrated solution");
-    addCurveToPlot(plot, normalFormX, normalFormY, "normal form solution");
+    addCurveToPlot(plot, intX, intY, "rozwiązanie - całkowanie numeryczne");
+    addCurveToPlot(plot, normalFormX, normalFormY, "rozwiązanie - forma normalna");
     showAndSavePlot(plot, "plot.pdf");
 }
 

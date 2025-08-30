@@ -21,8 +21,14 @@ LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &point, int orde
 Plot2D initializePlot()
 {
     Plot2D plot;
-    plot.xlabel("x");
-    plot.ylabel("y");
+
+    int fontSize = 30;
+    plot.fontSize(fontSize);
+
+    plot.xlabel("x").fontSize(fontSize);
+    plot.ylabel("y").fontSize(fontSize);
+    plot.xtics().fontSize(fontSize-10);
+    plot.ytics().fontSize(fontSize-10);
     plot.palette("set1");
 
     plot.xrange(-1.25, 1.25);
@@ -38,20 +44,18 @@ Plot2D initializePlot()
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
     plot.drawPoints(librationPointsX, librationPointsY).label("punkty libracji");
-    vector<double> primatesX({-0.5, 0.5});
-    vector<double> primatesY({0, 0});
-    plot.drawPoints(primatesX, primatesY).label("Słońce i Jowisz");
+    vector<double> primariesX({-0.5, 0.5});
+    vector<double> primariesY({0, 0});
+    plot.drawPoints(primariesX, primariesY).label("ciała o masie μ oraz 1-μ");
 
     return plot;
 }
 
-void showAndSavePlot(Plot2D &plot, string filename)
+void savePlot(Plot2D &plot, string filename)
 {
     Figure fig({{plot}});
     Canvas canvas({{fig}});
     canvas.size(500, 500);
-
-    canvas.show();
     canvas.save("experiments/plots/symmetric_orbits/" + filename);
 }
 
@@ -179,27 +183,27 @@ int main()
     Plot2D plot1 = initializePlot();
     LDVector point1({0.5, -0.57, -0.3, -0.1});
     drawOrbitAndTimeSymmetric(point1, plot1, testCases);
-    showAndSavePlot(plot1, "symmetric_orbit_time_1.pdf");
+    savePlot(plot1, "symmetric_orbit_time_1.pdf");
 
     // orbita symetryczna względem odwrocenia czasu
     Plot2D plot2 = initializePlot();
     LDVector point2({0.1, 0, 0, 0.1});
     drawTimeSymmetricOrbit(point2, plot2, testCases);
     plot2.drawPoints(vector<double>({0.1}), vector<double>({0})).label("punkt (0.1, 0, 0, 0.1)").pointType(7);
-    showAndSavePlot(plot2, "symmetric_orbit_time_2.pdf");
+    savePlot(plot2, "symmetric_orbit_time_2.pdf");
 
     // para orbit symetrycznych względem masy
     Plot2D plot3 = initializePlot();
     LDVector point3({0.5, -0.57, -0.3, -0.1});
     drawOrbitAndMassSymmetric(point3, plot3, testCases);
-    showAndSavePlot(plot3, "symmetric_orbit_mass_1.pdf");
+    savePlot(plot3, "symmetric_orbit_mass_1.pdf");
 
     // orbita symetryczna względem masy
     Plot2D plot4 = initializePlot();
     LDVector point4({0, 0.2, 0.2, 0});
     drawMassSymmetricOrbit(point4, plot4, testCases);
     plot4.drawPoints(vector<double>({0}), vector<double>({0.2})).label("punkt (0, 0.2, 0.2, 0)").pointType(7);
-    showAndSavePlot(plot4, "symmetric_orbit_mass_2.pdf");
+    savePlot(plot4, "symmetric_orbit_mass_2.pdf");
 
     return 0;
 }

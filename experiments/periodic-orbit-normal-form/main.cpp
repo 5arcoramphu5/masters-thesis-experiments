@@ -140,10 +140,6 @@ int main()
     initializePlots(plot, plotCloseUp, epsilon);
 
     vector<double> solverX, solverY, solverX2, solverY2;
-    solverX.reserve(N);
-    solverY.reserve(N);
-    solverX2.reserve(N);
-    solverY2.reserve(N);
 
     CVector lastPoint;
     double timeLeft;

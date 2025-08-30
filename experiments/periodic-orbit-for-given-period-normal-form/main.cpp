@@ -8,7 +8,8 @@
 
 #define PLOT_SCALE 1000
 #define L4_Y 0.866025403784438646763723170753
-#define PLOT_SIZE_PIXELS 300
+#define PLOT_SIZE_X 500
+#define PLOT_SIZE_Y 600
 
 using namespace std;
 using namespace capd;
@@ -29,19 +30,32 @@ LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, i
 
 // PLOTTING ----------------------------------------------------------
 
+void setupCommonPlotSettings(Plot2D &plot)
+{
+    int fontSize = 30;
+    plot.fontSize(fontSize);
+
+    plot.xlabel("x").fontSize(fontSize);
+    plot.ylabel("y").fontSize(fontSize);
+    plot.xtics().fontSize(fontSize-10);
+    plot.ytics().fontSize(fontSize-10);
+    plot.palette("set1");
+
+    plot.size(PLOT_SIZE_X, PLOT_SIZE_Y);
+
+    plot.legend()
+        .atOutsideBottom()
+        .displayHorizontal()
+        .displayExpandWidthBy(2);
+}
+
 void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
 {
-    plot.xlabel("x");
-    plot.ylabel("y");
-    plotCloseUp.xlabel("x");
-    plotCloseUp.ylabel("y");
-
-    plot.palette("set1");
-    plotCloseUp.palette("set1");
+    setupCommonPlotSettings(plot);
+    setupCommonPlotSettings(plotCloseUp);
 
     plot.xrange(-1, 1);
     plot.yrange(-0.7, 1.3);
-    plot.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     LDVector L4({0, L4_Y});
     LDVector lastPointInt2D({lastPointInt[0], lastPointInt[1]});
@@ -51,21 +65,11 @@ void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, LDVector lastPointInt)
 
     plotCloseUp.xrange(-epsilon*rangeMul, epsilon*rangeMul);
     plotCloseUp.yrange(L4_Y-epsilon*rangeMul, L4_Y+epsilon*rangeMul);
-    plotCloseUp.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
-
-    plot.legend()
-        .atOutsideBottom()
-        .displayHorizontal()
-        .displayExpandWidthBy(2);
-    plotCloseUp.legend()
-        .atOutsideBottom()
-        .displayHorizontal()
-        .displayExpandWidthBy(2);
 
     // drawing libration points
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
-    plot.drawPoints(librationPointsX, librationPointsY).label("libration points");
+    plot.drawPoints(librationPointsX, librationPointsY).label("punkty libracji");
     plotCloseUp.drawPoints( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
 }
 
@@ -88,7 +92,7 @@ void showAndSavePlot(Plot2D &plot, string filename)
 {
     Figure fig({{plot}});
     Canvas canvas({{fig}});
-    canvas.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
+    canvas.size(PLOT_SIZE_X, PLOT_SIZE_Y);
 
     canvas.show();
     canvas.save("experiments/periodic-orbit-for-given-period-normal-form/" + filename);
@@ -213,8 +217,8 @@ int main(int argc, char* argv[])
         solverX2.push_back(-intSolution(t)[0]); 
         solverY2.push_back(intSolution(t)[1]); 
     }
-    addCurveToPlots(plot, plotCloseUp, solverX, solverY, "integrated solution");
-    addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "symmetric trajectory");
+    addCurveToPlots(plot, plotCloseUp, solverX, solverY, "rozwiązanie - całkowanie numeryczne");
+    addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "rozwiązanie symetryczne");
 
     if(timeLeft > 0)
     {
@@ -238,7 +242,7 @@ int main(int argc, char* argv[])
         cout << "diffLeft:\n " <<  (nfX.front() - solverX.back()) << " " << (nfY.front() - solverY.back()) << endl;
         cout << "diffRight:\n" << (nfX.back() - solverX2.back()) << " " << (nfY.back() - solverY2.back()) << endl;
 
-        addCurveToPlots(plot, plotCloseUp, nfX, nfY, "normal form solution");
+        addCurveToPlots(plot, plotCloseUp, nfX, nfY, "rozwiązanie - forma normalna");
     }
 
     showAndSavePlots(plot, plotCloseUp);

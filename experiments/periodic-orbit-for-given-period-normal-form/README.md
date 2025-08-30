@@ -1,0 +1,3 @@
+Program calculates a periodic orbit of given period near the $L_4$ libration point in the PCR3BP system. It is done using Newton's method and combination of numerical integration from [the CAPD library](https://github.com/CAPDgroup/CAPD) and explicit solution given by the normal form of the system from [the `normal-forms` repository](https://github.com/5arcoramphu5/normal-forms).
+
+The results are compared to the version that uses only numerical integration implemented in `periodic-orbit-for-given-period-integration` directory.

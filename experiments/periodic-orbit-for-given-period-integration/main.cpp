@@ -16,7 +16,7 @@ using namespace sciplot;
 
 #define PLOT_SCALE 1000
 #define L4_Y 0.866025403784438646763723170753
-#define PLOT_SIZE_PIXELS 300
+#define PLOT_SIZE_PIXELS 500
 
 LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, int order, double initTime, double finalTime)
 {
@@ -29,38 +29,42 @@ LDTimeMap::SolutionCurve integrateSolution(LDMap &map, LDVector &initialPoint, i
     return solution;
 }
 
-void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, double epsilon)
+void setupCommonPlotSettings(Plot2D &plot)
 {
-    plot.xlabel("x");
-    plot.ylabel("y");
-    plotCloseUp.xlabel("x");
-    plotCloseUp.ylabel("y");
+    int fontSize = 30;
+    plot.fontSize(fontSize);
 
+    plot.xlabel("x").fontSize(fontSize);
+    plot.ylabel("y").fontSize(fontSize);
+    plot.xtics().fontSize(fontSize-10);
+    plot.ytics().fontSize(fontSize-10);
     plot.palette("set1");
-    plotCloseUp.palette("set1");
 
-    plot.xrange(-1, 1);
-    plot.yrange(-0.7, 1.3);
     plot.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
-
-    double scale = 10*PLOT_SCALE;
-    plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
-    plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
-    plotCloseUp.size(PLOT_SIZE_PIXELS, PLOT_SIZE_PIXELS);
 
     plot.legend()
         .atOutsideBottom()
         .displayHorizontal()
         .displayExpandWidthBy(2);
-    plotCloseUp.legend()
-        .atOutsideBottom()
-        .displayHorizontal()
-        .displayExpandWidthBy(2);
+}
+
+void initializePlots(Plot2D &plot, Plot2D &plotCloseUp, double epsilon)
+{
+    setupCommonPlotSettings(plot);
+    setupCommonPlotSettings(plotCloseUp);
+    int fontSize = 30;
+
+    plot.xrange(-1, 1);
+    plot.yrange(-0.7, 1.3);
+
+    double scale = 10*PLOT_SCALE;
+    plotCloseUp.xrange(-epsilon*scale, epsilon*scale);
+    plotCloseUp.yrange(0.866025403784438646763723170753-epsilon*scale, 0.866025403784438646763723170753+epsilon*scale);
 
     // drawing libration points
     vector<double> librationPointsX({0, 0, 0, 1.19841, -1.19841});
     vector<double> librationPointsY({0, 0.866025403784438646763723170753, -0.866025403784438646763723170753, 0, 0});
-    plot.drawPoints(librationPointsX, librationPointsY).label("libration points");
+    plot.drawPoints(librationPointsX, librationPointsY).label("punkty libracji");
     plotCloseUp.drawPoints( vector<double>({librationPointsX[1]}), vector<double>({librationPointsY[1]})).label("L4");
 }
 
@@ -93,20 +97,6 @@ void showAndSavePlots(Plot2D &plot, Plot2D &plotCloseUp)
 {
     showAndSavePlot(plot, "plot.pdf");
     showAndSavePlot(plotCloseUp, "plotCloseUp.pdf");
-}
-
-// phi = id - Q
-// phi^{-1} = id + Q + Q^2 + Q^3 + ... + Q^deg
-CVector inverse(const Polynomial<Complex> &phi, const CVector &x, int deg)
-{
-    CVector result = x;
-    CVector curr = x;
-    for(int i = 0; i < deg; ++i)
-    {
-        curr = curr - phi(curr); // Q(curr)
-        result += curr;
-    }
-    return result;
 }
 
 // otrzymuje (y, v_x) 
@@ -197,8 +187,8 @@ int main(int argc, char* argv[])
     
     Plot2D plot, plotCloseUp;
     initializePlots(plot, plotCloseUp, epsilon);
-    addCurveToPlots(plot, plotCloseUp, solverX, solverY, "integrated solution");
-    addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "symmetric trajectory");
+    addCurveToPlots(plot, plotCloseUp, solverX, solverY, "rozwiązanie - całkowanie numeryczne");
+    addCurveToPlots(plot, plotCloseUp, solverX2, solverY2, "rozwiązanie symetryczne");
     showAndSavePlots(plot, plotCloseUp);
 
     return 0;

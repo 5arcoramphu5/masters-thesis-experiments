@@ -1,0 +1,1 @@
+Program draws a plot of a periodic orbit of period 60.8603627843 in the PCR3BP with equal masses. Its trajectory is computed with numerical integration from [the CAPD library](https://github.com/CAPDgroup/CAPD).
